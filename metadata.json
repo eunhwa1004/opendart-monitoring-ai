@@ -1,0 +1,6 @@
+{
+  "name": "기업 공시 모니터링 AI",
+  "description": "저축은행 직원을 위한 기업 공시 실시간 조회 및 AI 주요 내용 분석 서비스",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
