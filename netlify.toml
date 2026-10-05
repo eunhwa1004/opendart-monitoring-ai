@@ -1,0 +1,24 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+  functions = "netlify/functions"
+
+[[redirects]]
+  from = "/api/dart/search"
+  to = "/.netlify/functions/dart-search"
+  status = 200
+
+[[redirects]]
+  from = "/api/analyze-disclosure"
+  to = "/.netlify/functions/analyze-disclosure"
+  status = 200
+
+[[redirects]]
+  from = "/api/generate-summary-memo"
+  to = "/.netlify/functions/generate-summary-memo"
+  status = 200
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

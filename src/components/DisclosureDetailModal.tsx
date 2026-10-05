@@ -37,7 +37,7 @@ export const DisclosureDetailModal: React.FC<DisclosureDetailModalProps> = ({
   const [loadingAi, setLoadingAi] = useState(false);
   const [customQuestion, setCustomQuestion] = useState('');
 
-  // Call server-side Gemini API for AI disclosure analysis
+  // Call server-side / Netlify Function Gemini API for AI disclosure analysis
   const handleAnalyze = async (questionPrompt?: string) => {
     setLoadingAi(true);
     try {
@@ -45,21 +45,32 @@ export const DisclosureDetailModal: React.FC<DisclosureDetailModalProps> = ({
         .map((d) => `${d.sectionTitle}: ${d.keyPoints.join(', ')}`)
         .join('\n');
 
-      const res = await fetch('/api/analyze-disclosure', {
+      const payload = {
+        companyName: disclosure.companyName,
+        stockCode: disclosure.stockCode,
+        title: disclosure.title,
+        disclosureType: disclosure.type,
+        content: `${disclosure.summary}\n${detailsText}`,
+        question: questionPrompt || customQuestion || undefined,
+      };
+
+      let res = await fetch('/api/analyze-disclosure', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyName: disclosure.companyName,
-          stockCode: disclosure.stockCode,
-          title: disclosure.title,
-          disclosureType: disclosure.type,
-          content: `${disclosure.summary}\n${detailsText}`,
-          question: questionPrompt || customQuestion || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
 
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        res = await fetch('/.netlify/functions/analyze-disclosure', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.result) {
         setAiAnalysis(data.result);
       } else {
         setAiAnalysis('AI 분석 중 오류가 발생했습니다: ' + (data.error || '잠시 후 다시 시도해주세요.'));

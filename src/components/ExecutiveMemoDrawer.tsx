@@ -42,24 +42,35 @@ export const ExecutiveMemoDrawer: React.FC<ExecutiveMemoDrawerProps> = ({
     setLoadingMemo(true);
     try {
       const firstComp = bookmarkedDisclosures[0];
-      const res = await fetch('/api/generate-summary-memo', {
+      const payload = {
+        companyName: companies.join(', '),
+        stockCode: firstComp.stockCode,
+        selectedDisclosures: bookmarkedDisclosures.map((d) => ({
+          date: d.date,
+          companyName: d.companyName,
+          title: d.title,
+          type: d.type,
+          summary: d.summary,
+        })),
+      };
+
+      let res = await fetch('/api/generate-summary-memo', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          companyName: companies.join(', '),
-          stockCode: firstComp.stockCode,
-          selectedDisclosures: bookmarkedDisclosures.map((d) => ({
-            date: d.date,
-            companyName: d.companyName,
-            title: d.title,
-            type: d.type,
-            summary: d.summary,
-          })),
-        }),
+        body: JSON.stringify(payload),
       });
 
+      const contentType = res.headers.get('content-type') || '';
+      if (!res.ok || contentType.includes('text/html')) {
+        res = await fetch('/.netlify/functions/generate-summary-memo', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
+
       const data = await res.json();
-      if (res.ok) {
+      if (res.ok && data.result) {
         setAiMemo(data.result);
       } else {
         setAiMemo('보고서 생성 실패: ' + (data.error || '잠시 후 다시 시도해주세요.'));

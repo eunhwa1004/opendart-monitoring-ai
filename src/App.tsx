@@ -62,24 +62,38 @@ export default function App() {
     return '';
   };
 
-  // Fetch real disclosures from OpenDART via backend proxy
+  // Fetch real disclosures from OpenDART via backend / Netlify Function
   const fetchOpenDartDisclosures = useCallback(async () => {
     setLoadingDart(true);
     setDartMessage('');
     try {
-      const res = await fetch('/api/dart/search', {
+      const payload = {
+        corp_code: selectedCompany ? selectedCompany.corp_code : undefined,
+        bgn_de: startDate,
+        end_de: endDate,
+        pblntf_ty: getOpenDartCategoryCode(disclosureType),
+        page_no: 1,
+        page_count: 100,
+        userApiKey: userApiKey || undefined,
+      };
+
+      // Primary call to /api/dart/search (which Netlify redirects to /.netlify/functions/dart-search)
+      let res = await fetch('/api/dart/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          corp_code: selectedCompany ? selectedCompany.corp_code : undefined,
-          bgn_de: startDate,
-          end_de: endDate,
-          pblntf_ty: getOpenDartCategoryCode(disclosureType),
-          page_no: 1,
-          page_count: 100,
-          userApiKey: userApiKey || undefined,
-        }),
+        body: JSON.stringify(payload),
       });
+
+      const contentType = res.headers.get('content-type') || '';
+
+      // If server returned HTML (e.g. static host without rewrite rule active yet), fallback to direct Netlify function path
+      if (!res.ok || contentType.includes('text/html')) {
+        res = await fetch('/.netlify/functions/dart-search', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const data = await res.json();
       setDartStatus(data.status);
@@ -182,7 +196,7 @@ export default function App() {
               <h2 className="text-sm font-bold text-slate-100 flex items-center gap-2">
                 <span>금융감독원 OpenDART 공시 실시간 연동 데스크</span>
                 <span className="text-[10px] bg-emerald-950 text-emerald-300 border border-emerald-800 px-2 py-0.2 rounded font-mono">
-                  실제 OpenDART API 연동
+                  Netlify Functions 지원
                 </span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
@@ -281,7 +295,7 @@ export default function App() {
           <div>
             <p className="font-semibold text-slate-400">기업 공시 모니터링 AI (금융감독원 OpenDART 연동)</p>
             <p className="text-[11px] mt-0.5 text-slate-600">
-              금융감독원 OpenDART 공식 API 연동 · 본 서비스는 여신심사역의 객관적 공시 확인을 지원하며 임의의 위험 등급을 산정하지 않습니다.
+              Netlify Serverless Functions & OpenDART 공식 API 연동 · 본 서비스는 여신심사역의 객관적 공시 확인을 지원하며 임의의 위험 등급을 산정하지 않습니다.
             </p>
           </div>
           <div className="text-[11px] font-mono text-slate-600">
